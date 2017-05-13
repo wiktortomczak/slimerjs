@@ -14,6 +14,7 @@ Cu.import('resource://slimerjs/addon-sdk/toolkit/loader.js'); //Sandbox, Require
 Cu.import('resource://slimerjs/slConsole.jsm');
 Cu.import('resource://slimerjs/slUtils.jsm');
 Cu.import('resource://slimerjs/slConfiguration.jsm');
+Cu.import('resource://slimerjs/windowScope.jsm');  // WindowScope
 
 const windowMediator = Cc["@mozilla.org/appshell/window-mediator;1"]
                      .getService(Ci.nsIWindowMediator);
@@ -110,12 +111,24 @@ var slLauncher = {
         // prepare the environment where the main script will be executed in
         // and prepare the loader which will load all other modules
         let scriptInfo = getMainScriptInfo();
-        mainLoader = prepareLoader(scriptInfo);
+        if (slConfiguration.moduleScope == 'sandbox') {
+          mainLoader = prepareLoader(scriptInfo);
+        } else if (slConfiguration.moduleScope == 'window') {
+          mainLoader = new WindowScope(mainWindow, slConfiguration.jsPath);
+          slConfiguration.windowScopePreload.forEach(function(modulePath) {
+            mainLoader.loadFromURI('file://' + modulePath);
+          });
+        } else {
+          throw new Error('Unknown loader type: '+ slConfiguration.moduleScope);
+        }
 
         try {
-            // first load the bootstrap module
-            let bsModule = Loader.Module('@slimer-sdk/bootstrap', 'resource://slimerjs/slimer-sdk/bootstrap.js');
-            mainLoader.load(mainLoader, bsModule);
+            // TODO: Support the bootstrap module in WindowScope.
+            if (slConfiguration.moduleScope == 'sandbox') {
+              // first load the bootstrap module
+              let bsModule = Loader.Module('@slimer-sdk/bootstrap', 'resource://slimerjs/slimer-sdk/bootstrap.js');
+              mainLoader.load(mainLoader, bsModule);
+            }
 
             // load the main module
             let uri = scriptInfo.sURI;
@@ -337,7 +350,7 @@ function prepareLoader(scriptInfo) {
         // this function should return the true id of the module.
         // The returned id should be an id or an absolute path of a file
         resolve: function(id, requirer) {
-            additionalPaths = [];
+          additionalPaths = [];
             let relativeId = false;
             if (id[0] == '.') {
                 relativeId = id;
@@ -406,6 +419,9 @@ function prepareLoader(scriptInfo) {
                     additionalPaths.push(slUtils.getMozFile(path));
                 }
             }
+
+            additionalPaths = additionalPaths.concat(slConfiguration.jsPath);
+
             if (relativeId) {
                 return relativeId;
             }

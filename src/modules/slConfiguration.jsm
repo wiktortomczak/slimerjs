@@ -45,8 +45,10 @@ var optionsSpec = {
     diskCacheEnabled : ['disk-cache', 'bool', true, true],
     maxDiskCacheSize : ['max-disk-cache-size', 'int', -1, true],
     ignoreSslErrors : ['ignore-ssl-errors', 'bool', false, false],
+    jsPath: ['js-path', 'jsPath', [], true],
     loadImages: ['load-images', 'bool', true, true],
     localToRemoteUrlAccessEnabled : ['local-to-remote-url-access', 'bool', false, false],
+    moduleScope: ['module-scope', 'moduleScope', 'sandbox', true],
     outputEncoding : ['output-encoding', 'encoding', 'UTF-8', true],
     proxyType : ['proxy-type', 'proxytype', 'http', true],
     proxy : ['proxy', 'proxy', null, true],
@@ -67,7 +69,8 @@ var optionsSpec = {
     sslProtocol : ['ssl-protocol', 'sslproto', -1, true],
     userAgent : ['user-agent', 'string', defaultUA, true],
     viewportWidth : ['viewport-width', 'int', 400, true],
-    viewportHeight : ['viewport-height', 'int', 300, true]
+    viewportHeight : ['viewport-height', 'int', 300, true],
+    windowScopePreload : ['window-scope-preload', 'windowScopePreload', [], true]
 };
 
 var slConfiguration = {
@@ -373,6 +376,38 @@ var slConfiguration = {
         }
         throw new Error("Invalid value for '"+cmdlineOpt+"' option. It should be: SSLv3, TLSv1, TLSv1.1, TLSv1.2, TLS or 'any'");
     },
+
+    parse_jsPath: function(val, cmdlineOpt) {
+      var dirs = val.split(',');
+      // Assert that the directories exist.
+      dirs.forEach(function assertExists(dir) {
+        if (!slUtils.getMozFile(dir).exists()) {
+          throw new Error('--js-path directory does not exist: ' + dir);
+        }
+      });
+      return dirs;
+    },
+
+    parse_moduleScope: function(val, cmdlineOpt) {
+      if (val == 'sandbox' || val == 'window') {
+        return val;
+      } else {
+        throw new Error("Invalid value for " + cmdlineOpt);
+      }
+    },
+
+    parse_windowScopePreload: function(val, cmdlineOpt) {
+      var modulePaths = val.split(',');
+      // Assert that the files exist.
+      modulePaths.forEach(function assertExists(path) {
+        if (!slUtils.getMozFile(path).exists()) {
+          throw new Error(
+            '--window-scope-preload file does not exist: ' + path);
+        }
+      });
+      return modulePaths;
+    },
+
     handleConfigFile: function(fileName) {
         let file = slUtils.getMozFile(fileName, this.workingDirectory);
         let fileContent = slUtils.readSyncStringFromFile(file);
@@ -469,7 +504,9 @@ var slConfiguration = {
     diskCacheEnabled : true,
     maxDiskCacheSize : -1,
     ignoreSslErrors : false,
+    jsPath : [],
     loadImages: true,
+    moduleScope: 'sandbox',
     localToRemoteUrlAccessEnabled : false,
     outputEncoding : 'UTF-8',
     proxyType : 'http',
@@ -492,5 +529,6 @@ var slConfiguration = {
     userAgent: defaultUA,
     viewportWidth: 400,
     viewportHeight: 300,
+    windowScopePreload: [],
     isWindows: /windows/i.test(httphandler.oscpu)
 }
