@@ -336,7 +336,14 @@ exports.resolveURI = resolveURI;
 const Require = iced(function Require(loader, requirer) {
   let { modules, mapping, resolve, resolveURI, load } = loader;
 
-  function require(id) {
+  /**
+   * Loads a module. The {@code require()} function available in user modules.
+   *
+   * @param id Module to load.
+   * @param {!Object=} opt_moduleScopeContents Symbols to put in the loaded
+   *   module's global scope.
+   */ 
+  function require(id, opt_moduleScopeContents) {
     if (!id) // Throw if `id` is not passed.
       throw Error('you must provide a module name when calling require() from '
                   + requirer.id, requirer.uri);
@@ -359,7 +366,7 @@ const Require = iced(function Require(loader, requirer) {
     // further changes at runtime.
     else {
       module = modules[uri] = Module(requirement, uri);
-      freeze(load(loader, module));
+      freeze(load(loader, module, opt_moduleScopeContents));
     }
 
     return module.exports;

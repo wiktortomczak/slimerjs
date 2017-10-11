@@ -459,7 +459,9 @@ function prepareLoader(scriptInfo) {
         },
         // It loads the given module into a sandbox.
         // It replaces the default loader, Loader.load
-        load : function(loader, module) {
+        // @param {!Object=} opt_moduleScopeContents Symbols to put in the
+        //   loaded module's global scope.
+        load : function(loader, module, opt_moduleScopeContents) {
 
             // let's prepare the require function that will
             // be available in the sandbox.
@@ -499,6 +501,9 @@ function prepareLoader(scriptInfo) {
             let properties = {};
             fillDescriptor(globalProperties, properties)
             fillDescriptor(loader.globals, properties)
+            if (opt_moduleScopeContents) {
+              fillDescriptor(opt_moduleScopeContents, properties)
+            }
             fillDescriptor({
                     require: require,
                     module: module,
@@ -513,7 +518,7 @@ function prepareLoader(scriptInfo) {
                     content = '//'+content;
                 }
                 if (this != mainLoader.main) {
-                    content = '(function(require, exports, module){'+content+'\n}).call({},require, module.exports, module);\n';
+                    content = '(function(require, exports, module){'+content+'\n}).call(this,require, module.exports, module);\n';
                 }
                 Loader.load(loader, module, sandbox, content);
             }
