@@ -112,7 +112,8 @@ WindowScope.prototype.loadFromURI = function(uri) {
  * 
  * @param {!String} modulePath Path to a CommonJS module, possibly without .js.
  *    The path is resolved wrt. directories passed via {@code --js-path} flag.
- * @return {!Object} Exported symbols, value of the {@code exports} object.
+ * @return {!Object} Exported symbols, value of the module's
+ *   {@code module.exports} object.
  */
 WindowScope.prototype._require = function(modulePath) {
   // Find the module file.
@@ -127,14 +128,19 @@ WindowScope.prototype._require = function(modulePath) {
     var moduleId = '__module__' + _uriToId(moduleUri);
     var moduleScope = Cu.createObjectIn(this._window, {defineAs: moduleId});
     // Create a placeholder for the require()'d module's exports.
-    var exports = Cu.createObjectIn(moduleScope, {defineAs: 'exports'});
+    var module = Cu.createObjectIn(moduleScope, {defineAs: 'module'});
+    var module_exports = Cu.createObjectIn(module, {defineAs: 'exports'});
+    // In module scope, create a reference to module.exports named exports.
+    // Equivalent to 'var exports = module.exports' in module scope.
+    // https://stackoverflow.com/a/16383925/2131969
+    moduleScope.exports = module_exports;
     // Load the module.
     loadSubScript(moduleUri, moduleScope);
     // Cache the module - cache its exports.
-    this._modules[moduleUri] = exports;
+    this._modules[moduleUri] = module.exports;
     if (DEBUG_REQUIRE) {
-      slDebugLog('require(\'' + modulePath + '\') exports = { '
-                 + Object.keys(exports).join(', ') + ' }');
+      slDebugLog('require(\'' + modulePath + '\') module.exports = { '
+                 + Object.keys(module.exports).join(', ') + ' }');
     }
   }
 
